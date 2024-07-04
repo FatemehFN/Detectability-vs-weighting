@@ -82,7 +82,7 @@ def link_prediction_task(
     if feature_vec is None:
         feature_vec = generate_base_embedding(net, feature_vec_dim)
         feature_vec = torch.FloatTensor(feature_vec)
-
+    model.in_channels = feature_vec_dim
     # Create PyTorch data object with features and edge list
     data = Data(edge_index=edge_index, x=feature_vec)
 
@@ -219,6 +219,8 @@ def community_detection_task(
         feature_vec = generate_base_embedding(net, feature_vec_dim)
         feature_vec = torch.FloatTensor(feature_vec)
 
+    model.in_channels = feature_vec_dim
+
     # Create PyTorch data object with features and edge list
     memberships = torch.LongTensor(memberships)
     data = Data(edge_index=edge_index, x=feature_vec, membership=memberships)
@@ -303,6 +305,7 @@ def community_detection_task(
     model.eval()
     emb = model(feature_vec.to(device), edge_index.to(device))
     emb = emb.detach().cpu().numpy()
+
     return model, emb
 
 

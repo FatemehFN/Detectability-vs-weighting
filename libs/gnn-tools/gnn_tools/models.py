@@ -238,7 +238,7 @@ def gnn_embedding(
         )
 
     if return_model:
-        return emb, model
+        return emb, model, device
     else:
         return emb
 

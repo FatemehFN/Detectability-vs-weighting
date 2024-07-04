@@ -6,6 +6,7 @@ from snakemake.utils import Paramspace
 import os
 from gnn_tools.models import embedding_models
 
+configfile: "workflow/config.yaml"
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
 
@@ -119,6 +120,8 @@ MPM_EVAL_DIR = j(MPM_DIR, "evaluations")
 paramspace_mpm = to_paramspace(params_mpm)
 MPM_NET_FILE = j(MPM_NET_DIR, f"net_{paramspace_mpm.wildcard_pattern}.npz")
 MPM_NODE_FILE = j(MPM_NET_DIR, f"node_{paramspace_mpm.wildcard_pattern}.npz")
+MPM_NET_TRAIN_FILE = j(MPM_NET_DIR, f"train_net_{paramspace_mpm.wildcard_pattern}.npz")
+MPM_NODE_TRAIN_FILE = j(MPM_NET_DIR, f"train_node_{paramspace_mpm.wildcard_pattern}.npz")
 
 paramspace_mpm_emb = to_paramspace([params_mpm, params_emb])
 MPM_EMB_FILE = j(MPM_EMB_DIR, f"{paramspace_mpm_emb.wildcard_pattern}.npz")
@@ -151,6 +154,19 @@ rule figs_lfr:
         expand(FIG_LFR_AUCNMI, **params_fig_lfr),
 
 
+rule generate_lfr_net_train:
+    params:
+        parameters=paramspace_lfr.instance,
+    output:
+        output_file=LFR_NET_TRAIN_FILE,
+        output_node_file=LFR_NODE_TRAIN_FILE,
+    wildcard_constraints:
+        data="lfr"
+    resources:
+        mem="12G",
+        time="04:00:00"
+    script:
+        "workflow/generate-lfr-networks.py"
 
 rule generate_lfr_net:
     params:
@@ -264,6 +280,20 @@ rule plot_lfr_result_nmi:
 # MPM benchmark
 # ======================================
 
+rule generate_mpm_net_train:
+    params:
+        parameters=paramspace_mpm.instance,
+    output:
+        output_file=MPM_NET_TRAIN_FILE,
+        output_node_file=MPM_NODE_TRAIN_FILE,
+    wildcard_constraints:
+        data="mpm"
+    resources:
+        mem="12G",
+        time="04:00:00"
+    script:
+        "workflow/generate-mpm-networks.py"
+
 rule generate_mpm_net:
     params:
         parameters=paramspace_mpm.instance,
@@ -280,6 +310,8 @@ rule generate_mpm_net:
 
 rule embedding_mpm:
     input:
+        train_net_file=MPM_NET_TRAIN_FILE,
+        train_com_file=MPM_NODE_TRAIN_FILE,
         net_file=MPM_NET_FILE,
         com_file=MPM_NODE_FILE,
     output:
@@ -287,7 +319,7 @@ rule embedding_mpm:
     params:
         parameters=paramspace_emb.instance,
     script:
-        "workflow/embedding.py"
+        "workflow/embedding-supervised-gnn.py"
 
 rule kmeans_clustering_mpm:
     input:
