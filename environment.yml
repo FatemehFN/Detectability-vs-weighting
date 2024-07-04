@@ -1,4 +1,4 @@
-name: det-lim-weighted 
+name: det-lim-weighted
 channels:
   - conda-forge
   - defaults
@@ -28,3 +28,4 @@ dependencies:
   - pyg
   - pytorch-sparse
   - python-igraph
+prefix: /home/skojaku/anaconda3/envs/det-lim-weighted
