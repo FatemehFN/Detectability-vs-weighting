@@ -23,6 +23,14 @@ FIG_DIR =j("figs")
 # Multi partition model
 N_SAMPLES = 10
 
+
+#
+# Network embedding
+#
+MODEL_LIST = ["GAT"]
+#MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"]
+params_emb = {"model": MODEL_LIST, "dim": [128]}
+paramspace_emb = to_paramspace(params_emb)
 #
 # Community detection
 #
@@ -80,6 +88,8 @@ LFR_EVAL_DIR = j(LFR_DIR, "evaluations")
 paramspace_lfr = to_paramspace(params_lfr)
 LFR_NET_FILE = j(LFR_NET_DIR, f"net_{paramspace_lfr.wildcard_pattern}.npz")
 LFR_NODE_FILE = j(LFR_NET_DIR, f"node_{paramspace_lfr.wildcard_pattern}.npz")
+LFR_NET_TRAIN_FILE = j(LFR_NET_DIR, f"train_net_{paramspace_lfr.wildcard_pattern}.npz")
+LFR_NODE_TRAIN_FILE = j(LFR_NET_DIR, f"train_node_{paramspace_lfr.wildcard_pattern}.npz")
 
 paramspace_lfr_emb = to_paramspace([params_lfr, params_emb])
 LFR_EMB_FILE = j(LFR_EMB_DIR, f"{paramspace_lfr_emb.wildcard_pattern}.npz")
@@ -158,6 +168,8 @@ rule generate_lfr_net:
 
 rule embedding_lfr:
     input:
+        train_net_file=LFR_NET_TRAIN_FILE,
+        train_com_file=LFR_NODE_TRAIN_FILE,
         net_file=LFR_NET_FILE,
         com_file=LFR_NODE_FILE,
     output:
@@ -165,7 +177,7 @@ rule embedding_lfr:
     params:
         parameters=paramspace_emb.instance,
     script:
-        "workflow/embedding.py"
+        "workflow/embedding-supervised-gnn.py"
 
 rule kmeans_clustering_lfr:
     input:
