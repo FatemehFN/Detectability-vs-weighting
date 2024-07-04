@@ -1,0 +1,9 @@
+[submodule "libs/libs/LFR-benchmark"]
+	path = libs/libs/LFR-benchmark
+	url = https://github.com/skojaku/LFR-benchmark
+[submodule "libs/LFR-benchmark"]
+	path = libs/LFR-benchmark
+	url = https://github.com/skojaku/LFR-benchmark
+[submodule "libs/gnn-tools"]
+	path = libs/gnn-tools
+	url = https://github.com/skojaku/gnn-tools
