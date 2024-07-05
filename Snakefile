@@ -59,7 +59,7 @@ params_lfr = { # LFR
 
 params_clustering = {
     "metric": ["cosine"],
-    "clustering": ["kmeans"],
+    "clustering": ["kmeans", "leiden"],
 }
 
 params_fig_lfr = {
@@ -70,6 +70,12 @@ params_fig_lfr = {
     "minc": params_lfr["minc"],
     "maxk": params_lfr["maxk"],
     "maxc": params_lfr["maxc"],
+}
+params_fig_mpm = {
+    "n": params_mpm["n"],
+    "q": params_mpm["q"],
+    "dim": params_emb["dim"],
+    "cave": params_mpm["cave"],
 }
 
 # ======================================
@@ -109,6 +115,12 @@ FIG_LFR_AUCESIM = j(FIG_DIR, "lfr_aucesim_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{
 FIG_LFR_PERF_CURVE_NMI = j(FIG_DIR, "lfr_perf_curve_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}.pdf")
 FIG_LFR_AUCNMI = j(FIG_DIR, "lfr_aucesim_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}.pdf")
 
+FIG_MPM_PERF_CURVE = j(FIG_DIR, "mpm_perf_curve_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
+FIG_MPM_AUCESIM = j(FIG_DIR, "mpm_aucesim_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
+
+FIG_MPM_PERF_CURVE_NMI = j(FIG_DIR, "mpm_perf_curve_metric~nmi_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
+FIG_MPM_AUCNMI = j(FIG_DIR, "mpm_aucesim_metric~nmi_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
+
 # Multi partition model
 MPM_DIR = j(CMD_DATASET_DIR, "mpm")
 
@@ -140,6 +152,8 @@ rule all_mpm:
     input:
         expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering),
         j(MPM_EVAL_DIR, "all_scores.csv"),
+        expand(FIG_MPM_PERF_CURVE, **params_fig_mpm),
+        expand(FIG_MPM_AUCESIM, **params_fig_mpm),
 
 rule all_lfr:
     input:
@@ -210,6 +224,23 @@ rule kmeans_clustering_lfr:
         time="01:00:00",
     script:
         "workflow/kmeans-clustering.py"
+
+rule leiden_clustering_lfr:
+    input:
+        net_file = LFR_NET_FILE,
+        emb_file=LFR_EMB_FILE,
+        com_file=LFR_NODE_FILE,
+    output:
+        output_file=LFR_COM_DETECT_EMB_FILE,
+    params:
+        parameters=paramspace_lfr_com_detect_emb.instance,
+    wildcard_constraints:
+        clustering="leiden",
+    resources:
+        mem="12G",
+        time="01:00:00",
+    script:
+        "workflow/reweighted-network-clustering.py"
 
 rule evaluate_communities_lfr:
     input:
@@ -337,6 +368,23 @@ rule kmeans_clustering_mpm:
     script:
         "workflow/kmeans-clustering.py"
 
+rule leiden_clustering_mpm:
+    input:
+        net_file = MPM_NET_FILE,
+        emb_file=MPM_EMB_FILE,
+        com_file=MPM_NODE_FILE,
+    output:
+        output_file=MPM_COM_DETECT_EMB_FILE,
+    params:
+        parameters=paramspace_mpm_com_detect_emb.instance,
+    wildcard_constraints:
+        clustering="leiden",
+    resources:
+        mem="12G",
+        time="01:00:00",
+    script:
+        "workflow/reweighted-network-clustering.py"
+
 rule evaluate_communities_mpm:
     input:
         detected_group_file=MPM_COM_DETECT_EMB_FILE,
@@ -355,8 +403,26 @@ rule concatenate_mpm_result:
     output:
         output_file = j(MPM_EVAL_DIR, "all_scores.csv"),
     params:
-        to_int = ["n", "K", "dim", "sample", "dim", "cave"],
+        to_int = ["n", "q", "dim", "sample", "cave"],
         to_float = ["mu"]
     script:
         "workflow/concatenate-com-detect-results.py"
 
+
+rule plot_mpm_result:
+    input:
+        input_file = j(MPM_EVAL_DIR, "all_scores.csv"),
+    output:
+        output_file_performance = FIG_MPM_PERF_CURVE,
+        output_file_aucesim = FIG_MPM_AUCESIM,
+    params:
+        model = ["GAT"],
+        clustering = "leiden",
+        metric = "cosine",
+        score_type = "esim",
+        q = lambda wildcards: int(wildcards.q),
+        n = lambda wildcards: int(wildcards.n),
+        dim = lambda wildcards: int(wildcards.dim),
+        cave = lambda wildcards: int(wildcards.cave),
+    script:
+        "workflow/plot_mpm_scores.py"

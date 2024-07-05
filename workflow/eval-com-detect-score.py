@@ -19,10 +19,10 @@ if "snakemake" in sys.modules:
     com_file = snakemake.input["com_file"]
     output_file = snakemake.output["output_file"]
 else:
-    com_file = "../../data/multi_partition_model/networks/node_n~10000_K~2_cave~50_mu~0.50_sample~0.npz"
-    detected_group_file = "../../data/multi_partition_model/communities/clus_n~10000_K~2_cave~50_mu~0.50_sample~0_model_name~leigenmap_window_length~10_dim~0_metric~cosine_clustering~voronoi.npz"
-    output_sim_file = "unko"
-    scoreType = "nmi"
+    com_file = "../data/derived/community-detection-datasets/mpm/networks/node_n~5000_q~50_cave~50_mu~0.10_sample~5.npz"
+    detected_group_file = "../data/derived/community-detection-datasets/mpm/clustering/clus_n~5000_q~50_cave~50_mu~0.10_sample~5_model~GAT_dim~128_metric~cosine_clustering~leiden.npz"
+    output_file = "unko"
+    scoreType = "esim"
 
 
 #
@@ -95,8 +95,11 @@ for keys, group_ids in groups.items():
 #
 # Save
 #
-res_table = pd.DataFrame(results).to_csv(output_file, index=False)
+res_table = pd.DataFrame(results)
+res_table
 
 # %%
+
+res_table.to_csv(output_file, index=False)
 
 # %%
