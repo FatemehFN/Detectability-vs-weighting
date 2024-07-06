@@ -18,7 +18,7 @@ Specifically, we build the conda environment with the following command.
 ```bash
 mamba create -n det-lim-weighted -c bioconda -c nvidia -c pytorch -c pyg python=3.11 cuda-version=12.1 pytorch torchvision torchaudio pytorch-cuda=12.1 snakemake graph-tool scikit-learn numpy==1.23.5 numba scipy==1.10.1 pandas polars networkx seaborn matplotlib gensim ipykernel tqdm black faiss-gpu pyg pytorch-sparse python-igraph -y
 pip install adabelief-pytorch==0.2.0
-pip install GPUtil powerlaw
+pip install GPUtil powerlaw leidenalg
 ```
 
 Additionally, we need the following custom packages to run the experiments.

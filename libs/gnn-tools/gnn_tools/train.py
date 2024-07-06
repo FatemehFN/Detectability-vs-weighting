@@ -239,16 +239,6 @@ def community_detection_task(
 
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    #    optimizer = AdaBelief(
-    #        model.parameters(),
-    #        lr=lr,
-    #        eps=1e-8,
-    #        betas=(0.9, 0.999),
-    #        weight_decouple=False,
-    #        rectify=False,
-    #        print_change_log=False,
-    #    )
 
     # Train the model for the specified number of epochs
     pbar = tqdm(total=epochs)

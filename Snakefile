@@ -58,8 +58,9 @@ params_lfr = { # LFR
 }
 
 params_clustering = {
-    "metric": ["cosine"],
-    "clustering": ["kmeans", "leiden"],
+    "metric": ["cosine", "dotsim", "sigmoid"],
+    "clustering": ["leiden"],
+    #"clustering": ["kmeans", "leiden"],
 }
 
 params_fig_lfr = {
@@ -70,12 +71,14 @@ params_fig_lfr = {
     "minc": params_lfr["minc"],
     "maxk": params_lfr["maxk"],
     "maxc": params_lfr["maxc"],
+    "metric": params_clustering["metric"],
 }
 params_fig_mpm = {
     "n": params_mpm["n"],
     "q": params_mpm["q"],
     "dim": params_emb["dim"],
     "cave": params_mpm["cave"],
+    "metric": params_clustering["metric"],
 }
 
 # ======================================
@@ -109,17 +112,17 @@ LFR_COM_DETECT_EMB_FILE = j(
 LFR_EVAL_EMB_FILE = j(LFR_EVAL_DIR, f"score_clus_{paramspace_lfr_com_detect_emb.wildcard_pattern}.npz")
 
 # Figure
-FIG_LFR_PERF_CURVE = j(FIG_DIR, "lfr_perf_curve_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}.pdf")
-FIG_LFR_AUCESIM = j(FIG_DIR, "lfr_aucesim_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}.pdf")
+FIG_LFR_PERF_CURVE = j(FIG_DIR, "lfr_perf_curve_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}_metric~{metric}.pdf")
+FIG_LFR_AUCESIM = j(FIG_DIR, "lfr_aucesim_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}_metric~{metric}.pdf")
 
-FIG_LFR_PERF_CURVE_NMI = j(FIG_DIR, "lfr_perf_curve_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}.pdf")
-FIG_LFR_AUCNMI = j(FIG_DIR, "lfr_aucesim_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}.pdf")
+FIG_LFR_PERF_CURVE_NMI = j(FIG_DIR, "lfr_perf_curve_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}_metric~{metric}.pdf")
+FIG_LFR_AUCNMI = j(FIG_DIR, "lfr_aucesim_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}_metric~{metric}.pdf")
 
-FIG_MPM_PERF_CURVE = j(FIG_DIR, "mpm_perf_curve_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
-FIG_MPM_AUCESIM = j(FIG_DIR, "mpm_aucesim_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
+FIG_MPM_PERF_CURVE = j(FIG_DIR, "mpm_perf_curve_n~{n}_q~{q}_cave~{cave}_dim~{dim}_metric~{metric}.pdf")
+FIG_MPM_AUCESIM = j(FIG_DIR, "mpm_aucesim_n~{n}_q~{q}_cave~{cave}_dim~{dim}_metric~{metric}.pdf")
 
-FIG_MPM_PERF_CURVE_NMI = j(FIG_DIR, "mpm_perf_curve_metric~nmi_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
-FIG_MPM_AUCNMI = j(FIG_DIR, "mpm_aucesim_metric~nmi_n~{n}_q~{q}_cave~{cave}_dim~{dim}.pdf")
+FIG_MPM_PERF_CURVE_NMI = j(FIG_DIR, "mpm_perf_curve_metric~nmi_n~{n}_q~{q}_cave~{cave}_dim~{dim}_metric~{metric}.pdf")
+FIG_MPM_AUCNMI = j(FIG_DIR, "mpm_aucesim_metric~nmi_n~{n}_q~{q}_cave~{cave}_dim~{dim}_metric~{metric}.pdf")
 
 # Multi partition model
 MPM_DIR = j(CMD_DATASET_DIR, "mpm")
@@ -295,7 +298,6 @@ rule plot_lfr_result_nmi:
     params:
         model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
         clustering = "kmeans",
-        metric = "cosine",
         score_type = "nmi",
         tau = lambda wildcards: float(wildcards.tau),
         k = lambda wildcards: int(wildcards.k),
@@ -304,6 +306,7 @@ rule plot_lfr_result_nmi:
         minc = lambda wildcards: int(wildcards.minc),
         maxk = lambda wildcards: int(wildcards.maxk),
         maxc = lambda wildcards: int(wildcards.maxc),
+        metric = lambda wildcards: wildcards.metric,
     script:
         "workflow/plot_lfr_scores.py"
 
@@ -418,11 +421,11 @@ rule plot_mpm_result:
     params:
         model = ["GAT"],
         clustering = "leiden",
-        metric = "cosine",
         score_type = "esim",
         q = lambda wildcards: int(wildcards.q),
         n = lambda wildcards: int(wildcards.n),
         dim = lambda wildcards: int(wildcards.dim),
         cave = lambda wildcards: int(wildcards.cave),
+        metric = lambda wildcards: wildcards.metric,
     script:
         "workflow/plot_mpm_scores.py"

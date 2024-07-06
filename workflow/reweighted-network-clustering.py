@@ -34,23 +34,33 @@ import leidenalg
 def clustering(net, emb, group_ids, metric="euclidean"):
     src, trg, _ = sparse.find(net)
 
-    if metric == "cosine":
+    if metric == "dotsim":
+        weight = np.sum(emb[src, :] * emb[trg, :], axis=1).reshape(-1)
+        weight = np.maximum(weight, 1e-10)
+    elif metric == "cosine":
         nemb = emb / np.linalg.norm(emb, axis=1).reshape(-1, 1)
         weight = nemb[src, :] * nemb[trg, :]
         weight = np.sum(weight, axis=1).reshape(-1)
+        weight = np.maximum(weight, 1e-10)
+    elif metric == "sigmoid":
+        weight = np.sum(emb[src, :] * emb[trg, :], axis=1).reshape(-1)
+        weight = 1.0 / (1 + np.exp(-weight))
     else:
         weight = np.linalg.norm(emb[src, :] - emb[trg, :], axis=1)
 
-    W = sparse.csr_matrix((weight, (src, trg)), shape=(emb.shape[0], emb.shape[0]))
-
-    g = igraph.Graph.TupleList([[src[i], trg[i], weight[i]] for i in range(len(src))])
-    part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
+    g = igraph.Graph.TupleList(
+        [[src[i], trg[i], weight[i]] for i in range(len(src))],
+        weights=True,
+        directed=False,
+    )
+    weights = [edge["weight"] for edge in g.es]
+    part = leidenalg.find_partition(
+        g, leidenalg.ModularityVertexPartition, weights=weights
+    )
+    node_idx = np.array([g.vs[i]["name"] for i in range(len(g.vs))])
     memberships = np.zeros(net.shape[0])
     for i, p in enumerate(part):
-        memberships[p] = i
-
-    node_idx = np.argsort([g.vs[i]["name"] for i in range(len(g.vs))])
-    memberships = memberships[node_idx]
+        memberships[node_idx[p]] = i
 
     return memberships
 
