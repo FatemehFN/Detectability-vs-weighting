@@ -79,6 +79,7 @@ for q in qs:
                     A, dim=128, memberships=labels
                 )
 
+                # This is computationally too expensive!!! @Sadamori
                 S = emb @ emb.T
                 U = sparse.csr_matrix(
                     (np.ones_like(labels), (np.arange(len(labels)), labels)),
