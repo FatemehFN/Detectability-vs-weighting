@@ -5,255 +5,226 @@ import numpy as np
 from heapq import heappush
 
 
-
-
-
-def leiden_partitions(G,reweight=False,n_of_iterations=0):
-
-
+def leiden_partitions(G, reweight=False, n_of_iterations=0):
 
     U = nx.Graph()
     U.add_nodes_from(sorted(G.nodes(data=True)))
     U.add_edges_from(G.edges(data=True))
 
-    #print(U.nodes(data=True))
+    # print(U.nodes(data=True))
 
-    mapping={} #from original node names to igraph node names
-    rev_mapping={} #from igraph node names to original node names
-    i=0
+    mapping = {}  # from original node names to igraph node names
+    rev_mapping = {}  # from igraph node names to original node names
+    i = 0
     for node in U.nodes():
         mapping.update({node: i})
-        rev_mapping.update({i:node})
-        i+=1
-
-
-
-
+        rev_mapping.update({i: node})
+        i += 1
 
     g = ig.Graph(directed=False)
     g.add_vertices(len(U.nodes()))
     for edge in U.edges(data=True):
-        g.add_edge(mapping[edge[0]],mapping[edge[1]])
+        g.add_edge(mapping[edge[0]], mapping[edge[1]])
 
-
-    if reweight==True:
-        iter=1
-        while(iter<=n_of_iterations):
-            #print('here')
+    if reweight == True:
+        iter = 1
+        while iter <= n_of_iterations:
+            # print('here')
             for edge in g.es:
-                source_node_index=edge.source
-                target_node_index=edge.target
-                neighbors_s=set(g.neighbors(source_node_index))
-                neighbors_t=set(g.neighbors(target_node_index))
+                source_node_index = edge.source
+                target_node_index = edge.target
+                neighbors_s = set(g.neighbors(source_node_index))
+                neighbors_t = set(g.neighbors(target_node_index))
 
-                #print('\n source and target node info')
-                #print(source_node_index)
-                #print(neighbors_s)
+                # print('\n source and target node info')
+                # print(source_node_index)
+                # print(neighbors_s)
 
-                #print(target_node_index)
-                #print(neighbors_t)
+                # print(target_node_index)
+                # print(neighbors_t)
 
-
-
-
-                intersection=neighbors_s.intersection(neighbors_t)
-                union=neighbors_s.union(neighbors_t)
+                intersection = neighbors_s.intersection(neighbors_t)
+                union = neighbors_s.union(neighbors_t)
 
                 intersection_l = len(intersection)
                 union_l = len(union)
-                if iter==1:
-                    jaccard_index=(intersection_l+1)/union_l
+                if iter == 1:
+                    jaccard_index = (intersection_l + 1) / union_l
 
                 else:
-                    weight_intersection=0
-                    weight_union=0
+                    weight_intersection = 0
+                    weight_union = 0
                     for item in intersection:
                         edge_id_s = g.get_eid(source_node_index, item)
                         edge_id_t = g.get_eid(target_node_index, item)
 
                         # Use the edge_id to access the edge
                         edge_s = g.es[edge_id_s]
-                        edge_t=g.es[edge_id_t]
-                        weight_intersection+=edge_s['weight']
-                        weight_intersection += edge_t['weight']
+                        edge_t = g.es[edge_id_t]
+                        weight_intersection += edge_s["weight"]
+                        weight_intersection += edge_t["weight"]
 
                     for item_1 in neighbors_s:
-                        edge_id_s_u=g.get_eid(source_node_index, item_1)
+                        edge_id_s_u = g.get_eid(source_node_index, item_1)
                         edge_s_u = g.es[edge_id_s_u]
-                        weight_union += edge_s_u['weight']
+                        weight_union += edge_s_u["weight"]
 
                     for item_2 in neighbors_t:
-                        edge_id_t_u=g.get_eid(target_node_index, item_2)
+                        edge_id_t_u = g.get_eid(target_node_index, item_2)
                         edge_t_u = g.es[edge_id_t_u]
-                        weight_union += edge_t_u['weight']
+                        weight_union += edge_t_u["weight"]
 
-                    if weight_union==0:
-                        jaccard_index=0
+                    if weight_union == 0:
+                        jaccard_index = 0
 
-                    else: jaccard_index=(weight_intersection+1)/weight_union
+                    else:
+                        jaccard_index = (weight_intersection + 1) / weight_union
 
-                    print('iter and weight intersection and weight union')
+                    print("iter and weight intersection and weight union")
                     print(iter)
                     print(weight_intersection)
                     print(weight_union)
-                edge['weight'] = jaccard_index
+                edge["weight"] = jaccard_index
 
-                #edge['weight'] = 1
+                # edge['weight'] = 1
 
-
-                print('edge')
+                print("edge")
                 print(rev_mapping[edge.source])
                 print(rev_mapping[edge.target])
                 print(edge.attributes())
-            iter+=1
+            iter += 1
 
-
-
-
-
-        part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition,weights='weight')
-        #part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
-        #part = leidenalg.RBConfigurationVertexPartition(g)
+        part = leidenalg.find_partition(
+            g, leidenalg.ModularityVertexPartition, weights="weight"
+        )
+        # part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
+        # part = leidenalg.RBConfigurationVertexPartition(g)
         modularity_value = part.quality()
-        print('modularity',modularity_value)
+        print("modularity", modularity_value)
         print(part)
     else:
 
-
         part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
-        #part=[[0,1,2,3,4],[5,6,7,8,9]]
+        # part=[[0,1,2,3,4],[5,6,7,8,9]]
         modularity_value = part.quality()
-        print('modularity', modularity_value)
+        print("modularity", modularity_value)
         print(part)
 
-
-    #print(len(part))
-    part_in_original_node_names=[]
+    # print(len(part))
+    part_in_original_node_names = []
     for node_1 in U.nodes(data=True):
         for p in range(len(part)):
             if mapping[node_1[0]] in part[p]:
                 part_in_original_node_names.append(p)
 
+    print("leiden alg done with %s clusters" % (len(part)))
 
-    print('leiden alg done with %s clusters'%(len(part)))
-
-    #print('membership array using leiden')
-    #print(len(part_in_original_node_names))
-    #print(max(part_in_original_node_names))
+    # print('membership array using leiden')
+    # print(len(part_in_original_node_names))
+    # print(max(part_in_original_node_names))
 
     array_part = np.array(part_in_original_node_names)
-    print('array part')
+    print("array part")
     print(array_part)
 
-    return array_part,len(part)
+    return array_part, len(part)
 
-    #return part
-
-
-def leiden_partitions_fixed_ratio(G,ratio,memberships,reweight=False,n_of_iterations=0):
+    # return part
 
 
+def leiden_partitions_fixed_ratio(
+    G, ratio, memberships, reweight=False, n_of_iterations=0
+):
 
     U = nx.Graph()
     U.add_nodes_from(sorted(G.nodes(data=True)))
     U.add_edges_from(G.edges(data=True))
 
-    #print(U.nodes(data=True))
+    # print(U.nodes(data=True))
 
-    mapping={} #from original node names to igraph node names
-    rev_mapping={} #from igraph node names to original node names
-    i=0
+    mapping = {}  # from original node names to igraph node names
+    rev_mapping = {}  # from igraph node names to original node names
+    i = 0
     for node in U.nodes():
         mapping.update({node: i})
-        rev_mapping.update({i:node})
-        i+=1
-
-
-
+        rev_mapping.update({i: node})
+        i += 1
 
     g = ig.Graph(directed=False)
     g.add_vertices(len(U.nodes()))
     for edge in U.edges(data=True):
-        g.add_edge(mapping[edge[0]],mapping[edge[1]])
+        g.add_edge(mapping[edge[0]], mapping[edge[1]])
 
-
-    if reweight==True:
-        iter=1
-        while(iter<=n_of_iterations):
-            #print('here')
+    if reweight == True:
+        iter = 1
+        while iter <= n_of_iterations:
+            # print('here')
             for edge in g.es:
-                source_node_index=edge.source
-                target_node_index=edge.target
-                if memberships[source_node_index]==memberships[target_node_index]:
-                    edge['weight'] = ratio
+                source_node_index = edge.source
+                target_node_index = edge.target
+                if memberships[source_node_index] == memberships[target_node_index]:
+                    edge["weight"] = ratio
                 else:
-                    edge['weight'] = 1
+                    edge["weight"] = 1
 
-                #edge['weight'] = 1
+                # edge['weight'] = 1
 
-
-                print('edge')
+                print("edge")
                 print(edge.source)
                 print(edge.target)
                 print(edge.attributes())
-            iter+=1
+            iter += 1
 
-
-
-
-
-        part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition,weights='weight')
-        #part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
-        #part = leidenalg.RBConfigurationVertexPartition(g)
-        #modularity_value = part.quality()
-        #print('modularity',modularity_value)
-        #print(part)
+        part = leidenalg.find_partition(
+            g, leidenalg.ModularityVertexPartition, weights="weight"
+        )
+        # part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
+        # part = leidenalg.RBConfigurationVertexPartition(g)
+        # modularity_value = part.quality()
+        # print('modularity',modularity_value)
+        # print(part)
     else:
 
-
         part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
-        #part=[[0,1,2,3,4],[5,6,7,8,9]]
-        #modularity_value = part.quality()
-        #print('modularity', modularity_value)
-        #print(part)
+        # part=[[0,1,2,3,4],[5,6,7,8,9]]
+        # modularity_value = part.quality()
+        # print('modularity', modularity_value)
+        # print(part)
 
-
-    #print(len(part))
-    part_in_original_node_names=[]
+    # print(len(part))
+    part_in_original_node_names = []
     for node_1 in U.nodes(data=True):
         for p in range(len(part)):
             if mapping[node_1[0]] in part[p]:
                 part_in_original_node_names.append(p)
 
+    print("leiden alg done with %s clusters" % (len(part)))
 
-    print('leiden alg done with %s clusters'%(len(part)))
-
-    #print('membership array using leiden')
-    #print(len(part_in_original_node_names))
-    #print(max(part_in_original_node_names))
+    # print('membership array using leiden')
+    # print(len(part_in_original_node_names))
+    # print(max(part_in_original_node_names))
 
     array_part = np.array(part_in_original_node_names)
-    #print('array part')
-    #print(array_part)
+    # print('array part')
+    # print(array_part)
 
-    #calculate mu for all nodes
+    # calculate mu for all nodes
     for node in g.vs:
-        node['mu']=mixing_parameter(node,g,memberships)
-        print(node['mu'])
+        node["mu"] = mixing_parameter(node, g, memberships)
+        print(node["mu"])
 
-    sum_mu=0
+    sum_mu = 0
     for n in range(500):
-        sum_mu+=g.vs[n]['mu']
+        sum_mu += g.vs[n]["mu"]
 
-    print(sum_mu/500)
+    print(sum_mu / 500)
+
+    return array_part, len(part)
+
+    # return part
 
 
-
-    return array_part,len(part)
-
-    #return part
-
-def mixing_parameter(node,g,memberships):
+def mixing_parameter(node, g, memberships):
 
     k_in = 0
     k = 0
@@ -261,26 +232,28 @@ def mixing_parameter(node,g,memberships):
     for item in g.vs:
         if g.are_connected(node, item):
             edge_index = g.get_eid(node, item)
-            if memberships[item.index]==memberships[node.index]:
+            if memberships[item.index] == memberships[node.index]:
 
-                k_in+=g.es[edge_index]['weight']
+                k_in += g.es[edge_index]["weight"]
 
-            k+=g.es[edge_index]['weight']
+            k += g.es[edge_index]["weight"]
 
-    return 1-(k_in/k)
+    return 1 - (k_in / k)
 
 
 def leiden_max_modularity_part_weighted(g, trials=5):
     maxModularity = -1
-    part_to_return=None
-    weights = [edge['weight'] for edge in g.es]
+    part_to_return = None
+    weights = [edge["weight"] for edge in g.es]
     for _ in range(trials):
-        part=leidenalg.find_partition(g, leidenalg.ModularityVertexPartition, weights=weights)
-        modularity=part.quality()
+        part = leidenalg.find_partition(
+            g, leidenalg.ModularityVertexPartition, weights=weights
+        )
+        modularity = part.quality()
 
-        if(modularity > maxModularity):
+        if modularity > maxModularity:
             maxModularity = modularity
-            part_to_return=part
+            part_to_return = part
 
     return part_to_return
 
@@ -292,306 +265,257 @@ def leiden_max_modularity_part(g, trials=5):
         part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
         modularity = part.quality()
 
-        if (modularity > maxModularity):
+        if modularity > maxModularity:
             maxModularity = modularity
             part_to_return = part
 
     return part_to_return
 
 
-
-
-def leiden_partitions_bc(G,reweight=False,n_of_iterations=0):
-
-
+def leiden_partitions_bc(G, reweight=False, n_of_iterations=0):
 
     U = nx.Graph()
     U.add_nodes_from(sorted(G.nodes(data=True)))
     U.add_edges_from(G.edges(data=True))
 
-    #print(U.nodes(data=True))
+    # print(U.nodes(data=True))
 
-    mapping={} #from original node names to igraph node names
-    rev_mapping={} #from igraph node names to original node names
-    i=0
+    mapping = {}  # from original node names to igraph node names
+    rev_mapping = {}  # from igraph node names to original node names
+    i = 0
     for node in U.nodes():
         mapping.update({node: i})
-        rev_mapping.update({i:node})
-        i+=1
+        rev_mapping.update({i: node})
+        i += 1
 
-
-
-    #print('mapping and rev mapping')
-    #print(mapping)
-    #print(rev_mapping)
+    # print('mapping and rev mapping')
+    # print(mapping)
+    # print(rev_mapping)
 
     g = ig.Graph(directed=False)
     g.add_vertices(len(U.nodes()))
     for edge in U.edges(data=True):
-        g.add_edge(mapping[edge[0]],mapping[edge[1]])
+        g.add_edge(mapping[edge[0]], mapping[edge[1]])
 
     edge_betweenness = g.edge_betweenness(directed=False)
-    #print(edge_betweenness)
+    # print(edge_betweenness)
 
-    if reweight==True:
-        iter=1
-        while(iter<=n_of_iterations):
-            #print('here')
+    if reweight == True:
+        iter = 1
+        while iter <= n_of_iterations:
+            # print('here')
             for edge in g.es:
-                edge_index = g.get_eid(edge.source,edge.target, directed=False)
-                edge['weight'] =  1/(edge_betweenness[edge_index])**2
-                #edge['weight'] = 1 / (edge_betweenness[edge_index])
+                edge_index = g.get_eid(edge.source, edge.target, directed=False)
+                edge["weight"] = 1 / (edge_betweenness[edge_index]) ** 2
+                # edge['weight'] = 1 / (edge_betweenness[edge_index])
 
-
-                #print('edge')
-                #print(edge.source)
-                #print(edge.target)
-                #print(edge.attributes())
-            iter+=1
-
-
-
-
+                # print('edge')
+                # print(edge.source)
+                # print(edge.target)
+                # print(edge.attributes())
+            iter += 1
 
         part = leiden_max_modularity_part_weighted(g, trials=100)
-        #part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
-        #part = leidenalg.RBConfigurationVertexPartition(g)
-
+        # part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
+        # part = leidenalg.RBConfigurationVertexPartition(g)
 
     else:
 
         part = leiden_max_modularity_part(g, trials=100)
-        #part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
-        #part=[[0,1,2,3,4],[5,6,7,8,9]]
+        # part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
+        # part=[[0,1,2,3,4],[5,6,7,8,9]]
 
-
-
-    #print(len(part))
-    part_in_original_node_names=[]
+    # print(len(part))
+    part_in_original_node_names = []
     for node_1 in U.nodes(data=True):
         for p in range(len(part)):
             if mapping[node_1[0]] in part[p]:
                 part_in_original_node_names.append(p)
 
+    print("leiden alg done with %s clusters" % (len(part)))
 
-    print('leiden alg done with %s clusters'%(len(part)))
-
-    #print('membership array using leiden')
-    #print(len(part_in_original_node_names))
-    #print(max(part_in_original_node_names))
+    # print('membership array using leiden')
+    # print(len(part_in_original_node_names))
+    # print(max(part_in_original_node_names))
 
     array_part = np.array(part_in_original_node_names)
-    #print('array part')
-    #print(array_part)
+    # print('array part')
+    # print(array_part)
 
-    return array_part,len(part)
+    return array_part, len(part)
 
-    #return part
-
-
-def leiden_partitions_PPR(G,reweight=False,n_of_iterations=0):
+    # return part
 
 
+def leiden_partitions_PPR(G, reweight=False, n_of_iterations=0):
 
     U = nx.Graph()
     U.add_nodes_from(sorted(G.nodes(data=True)))
     U.add_edges_from(G.edges(data=True))
 
-    #print(U.nodes(data=True))
+    # print(U.nodes(data=True))
 
-    mapping={} #from original node names to igraph node names
-    rev_mapping={} #from igraph node names to original node names
-    i=0
+    mapping = {}  # from original node names to igraph node names
+    rev_mapping = {}  # from igraph node names to original node names
+    i = 0
     for node in U.nodes():
         mapping.update({node: i})
-        rev_mapping.update({i:node})
-        i+=1
+        rev_mapping.update({i: node})
+        i += 1
 
-
-
-    #print('mapping and rev mapping')
-    #print(mapping)
-    #print(rev_mapping)
+    # print('mapping and rev mapping')
+    # print(mapping)
+    # print(rev_mapping)
 
     g = ig.Graph(directed=False)
     g.add_vertices(len(U.nodes()))
     for edge in U.edges(data=True):
-        g.add_edge(mapping[edge[0]],mapping[edge[1]])
+        g.add_edge(mapping[edge[0]], mapping[edge[1]])
 
-    if reweight==True:
-        iter=1
-        while(iter<=n_of_iterations):
-            #print('here')
+    if reweight == True:
+        iter = 1
+        while iter <= n_of_iterations:
+            # print('here')
             for edge in g.es:
 
-                edge['weight'] =  personalized_pagerank_similarity(g, edge.source, edge.target)
+                edge["weight"] = personalized_pagerank_similarity(
+                    g, edge.source, edge.target
+                )
 
+                # print('edge')
+                # print(edge.source)
+                # print(edge.target)
+                # print(edge.attributes())
+            iter += 1
 
-
-                #print('edge')
-                #print(edge.source)
-                #print(edge.target)
-                #print(edge.attributes())
-            iter+=1
-
-
-
-
-
-        part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition,weights='weight')
-        #part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
-        #part = leidenalg.RBConfigurationVertexPartition(g)
-
+        part = leidenalg.find_partition(
+            g, leidenalg.ModularityVertexPartition, weights="weight"
+        )
+        # part = leidenalg.RBConfigurationVertexPartition(g, weights='weight', resolution_parameter=0.1)
+        # part = leidenalg.RBConfigurationVertexPartition(g)
 
     else:
 
-
         part = leidenalg.find_partition(g, leidenalg.ModularityVertexPartition)
-        #part=[[0,1,2,3,4],[5,6,7,8,9]]
+        # part=[[0,1,2,3,4],[5,6,7,8,9]]
 
-
-
-    #print(len(part))
-    part_in_original_node_names=[]
+    # print(len(part))
+    part_in_original_node_names = []
     for node_1 in U.nodes(data=True):
         for p in range(len(part)):
             if mapping[node_1[0]] in part[p]:
                 part_in_original_node_names.append(p)
 
+    print("leiden alg done with %s clusters" % (len(part)))
 
-    print('leiden alg done with %s clusters'%(len(part)))
-
-    #print('membership array using leiden')
-    #print(len(part_in_original_node_names))
-    #print(max(part_in_original_node_names))
+    # print('membership array using leiden')
+    # print(len(part_in_original_node_names))
+    # print(max(part_in_original_node_names))
 
     array_part = np.array(part_in_original_node_names)
-    #print('array part')
-    #print(array_part)
+    # print('array part')
+    # print(array_part)
 
-    return array_part,len(part)
+    return array_part, len(part)
 
-    #return part
-
-
+    # return part
 
 
-
-
-
-
-
-
-
-
-def reweight_adj_matrix(adj_matrix,G,n_of_iterations=1):
-
-
+def reweight_adj_matrix(adj_matrix, G, n_of_iterations=1):
 
     U = nx.Graph()
     U.add_nodes_from(sorted(G.nodes(data=True)))
     U.add_edges_from(G.edges(data=True))
 
-    #print(U.nodes(data=True))
+    # print(U.nodes(data=True))
 
-    mapping={} #from original node names to igraph node names
-    rev_mapping={} #from igraph node names to original node names
-    i=0
+    mapping = {}  # from original node names to igraph node names
+    rev_mapping = {}  # from igraph node names to original node names
+    i = 0
     for node in U.nodes():
         mapping.update({node: i})
-        rev_mapping.update({i:node})
-        i+=1
-
-
-
-
+        rev_mapping.update({i: node})
+        i += 1
 
     g = ig.Graph(directed=False)
     g.add_vertices(len(U.nodes()))
     for edge in U.edges(data=True):
-        g.add_edge(mapping[edge[0]],mapping[edge[1]])
+        g.add_edge(mapping[edge[0]], mapping[edge[1]])
 
+    iter = 1
 
-    iter=1
+    while iter <= n_of_iterations:
+        # print('here')
+        for edge in g.es:
+            source_node_index = edge.source
+            target_node_index = edge.target
+            neighbors_s = set(g.neighbors(source_node_index))
+            neighbors_t = set(g.neighbors(target_node_index))
 
-    while(iter<=n_of_iterations):
-            #print('here')
-            for edge in g.es:
-                source_node_index=edge.source
-                target_node_index=edge.target
-                neighbors_s=set(g.neighbors(source_node_index))
-                neighbors_t=set(g.neighbors(target_node_index))
+            # print('\n source and target node info')
+            # print(source_node_index)
+            # print(neighbors_s)
 
-                #print('\n source and target node info')
-                #print(source_node_index)
-                #print(neighbors_s)
+            # print(target_node_index)
+            # print(neighbors_t)
 
-                #print(target_node_index)
-                #print(neighbors_t)
+            intersection = neighbors_s.intersection(neighbors_t)
+            union = neighbors_s.union(neighbors_t)
 
+            intersection_l = len(intersection)
+            union_l = len(union)
+            if iter == 1:
+                jaccard_index = (intersection_l + 1) / union_l
 
+            else:
+                weight_intersection = 0
+                weight_union = 0
+                for item in intersection:
+                    edge_id_s = g.get_eid(source_node_index, item)
+                    edge_id_t = g.get_eid(target_node_index, item)
 
+                    # Use the edge_id to access the edge
+                    edge_s = g.es[edge_id_s]
+                    edge_t = g.es[edge_id_t]
+                    weight_intersection += edge_s["weight"]
+                    weight_intersection += edge_t["weight"]
 
-                intersection=neighbors_s.intersection(neighbors_t)
-                union=neighbors_s.union(neighbors_t)
+                for item_1 in neighbors_s:
+                    edge_id_s_u = g.get_eid(source_node_index, item_1)
+                    edge_s_u = g.es[edge_id_s_u]
+                    weight_union += edge_s_u["weight"]
 
-                intersection_l = len(intersection)
-                union_l = len(union)
-                if iter==1:
-                    jaccard_index=(intersection_l+1)/union_l
+                for item_2 in neighbors_t:
+                    edge_id_t_u = g.get_eid(target_node_index, item_2)
+                    edge_t_u = g.es[edge_id_t_u]
+                    weight_union += edge_t_u["weight"]
 
+                if weight_union == 0:
+                    jaccard_index = 0
 
                 else:
-                    weight_intersection=0
-                    weight_union=0
-                    for item in intersection:
-                        edge_id_s = g.get_eid(source_node_index, item)
-                        edge_id_t = g.get_eid(target_node_index, item)
+                    jaccard_index = (weight_intersection + 1) / weight_union
 
-                        # Use the edge_id to access the edge
-                        edge_s = g.es[edge_id_s]
-                        edge_t=g.es[edge_id_t]
-                        weight_intersection+=edge_s['weight']
-                        weight_intersection += edge_t['weight']
+                # print('iter and weight intersection and weight union')
+                # print(iter)
+                # print(weight_intersection)
+                # print(weight_union)
+            edge["weight"] = jaccard_index
+            adj_matrix[source_node_index, target_node_index] = jaccard_index
+            adj_matrix[target_node_index, source_node_index] = jaccard_index
 
-                    for item_1 in neighbors_s:
-                        edge_id_s_u=g.get_eid(source_node_index, item_1)
-                        edge_s_u = g.es[edge_id_s_u]
-                        weight_union += edge_s_u['weight']
+            # edge['weight'] = 1
 
-                    for item_2 in neighbors_t:
-                        edge_id_t_u=g.get_eid(target_node_index, item_2)
-                        edge_t_u = g.es[edge_id_t_u]
-                        weight_union += edge_t_u['weight']
+            # print(edge.attributes())
+        iter += 1
 
-                    if weight_union==0:
-                        jaccard_index=0
-
-                    else: jaccard_index=(weight_intersection+1)/weight_union
-
-                    #print('iter and weight intersection and weight union')
-                    #print(iter)
-                    #print(weight_intersection)
-                    #print(weight_union)
-                edge['weight'] = jaccard_index
-                adj_matrix[source_node_index, target_node_index]=jaccard_index
-                adj_matrix[target_node_index, source_node_index] = jaccard_index
-
-                #edge['weight'] = 1
-
-
-
-                #print(edge.attributes())
-            iter+=1
-
-    #print(adj_matrix)
+    # print(adj_matrix)
     return adj_matrix
 
 
-
-
-
-def personalized_pagerank_similarity(graph, node1, node2, damping=0.85, max_iter=100, tol=1e-6):
+def personalized_pagerank_similarity(
+    graph, node1, node2, damping=0.85, max_iter=100, tol=1e-6
+):
     """
     Calculate the Personalized PageRank similarity between two nodes in a graph.
 
@@ -619,81 +543,63 @@ def personalized_pagerank_similarity(graph, node1, node2, damping=0.85, max_iter
     pr2 = graph.personalized_pagerank(weights=None, reset=teleport)
 
     # Calculate cosine similarity between the two PageRank vectors
-    similarity = sum(x * y for x, y in zip(pr1, pr2)) / (sum(x**2 for x in pr1)**0.5 * sum(x**2 for x in pr2)**0.5)
+    similarity = sum(x * y for x, y in zip(pr1, pr2)) / (
+        sum(x**2 for x in pr1) ** 0.5 * sum(x**2 for x in pr2) ** 0.5
+    )
 
     return similarity
 
 
-
-
-
-
-def leiden_partitions_walktrap(G,t=3):
-
-
+def leiden_partitions_walktrap(G, t=3):
 
     U = nx.Graph()
     U.add_nodes_from(sorted(G.nodes(data=True)))
     U.add_edges_from(G.edges(data=True))
 
-
-
-    mapping={} #from original node names to igraph node names
-    rev_mapping={} #from igraph node names to original node names
-    i=0
+    mapping = {}  # from original node names to igraph node names
+    rev_mapping = {}  # from igraph node names to original node names
+    i = 0
     for node in U.nodes():
         mapping.update({node: i})
-        rev_mapping.update({i:node})
-        i+=1
-
-
+        rev_mapping.update({i: node})
+        i += 1
 
     g = ig.Graph(directed=False)
     g.add_vertices(len(U.nodes()))
     for edge in U.edges(data=True):
-        g.add_edge(mapping[edge[0]],mapping[edge[1]])
+        g.add_edge(mapping[edge[0]], mapping[edge[1]])
 
+    weighted_g = walktrap_edge_weights(g, t=t)
 
-    weighted_g=walktrap_edge_weights(g, t=t)
-
-    #for edge in weighted_g.es:
-        #print(f"Edge {edge.source} - {edge.target}: Weight = {edge['weight']}")
-
-
-
+    # for edge in weighted_g.es:
+    # print(f"Edge {edge.source} - {edge.target}: Weight = {edge['weight']}")
 
     part = leiden_max_modularity_part_weighted(weighted_g, trials=100)
 
-
-    part_in_original_node_names=[]
+    part_in_original_node_names = []
     for node_1 in U.nodes(data=True):
         for p in range(len(part)):
             if mapping[node_1[0]] in part[p]:
                 part_in_original_node_names.append(p)
 
+    print("leiden alg done with %s clusters" % (len(part)))
 
-    print('leiden alg done with %s clusters'%(len(part)))
-
-    #print('membership array using leiden')
-    #print(len(part_in_original_node_names))
-    #print(max(part_in_original_node_names))
+    # print('membership array using leiden')
+    # print(len(part_in_original_node_names))
+    # print(max(part_in_original_node_names))
 
     array_part = np.array(part_in_original_node_names)
-    #print('array part')
-    #print(array_part)
+    # print('array part')
+    # print(array_part)
 
-    return array_part,len(part)
-
-
-
-
-
-
+    return array_part, len(part)
 
 
 def walktrap_edge_weights(graph, t):
     def walktrap_similarity(C1, C2, Dx, P_t, N):
-        delta_sigma_C1C2 = (0.5 / N) * np.sum(np.square(np.matmul(Dx, P_t[C1]) - np.matmul(Dx, P_t[C2])))
+        delta_sigma_C1C2 = (0.5 / N) * np.sum(
+            np.square(np.matmul(Dx, P_t[C1]) - np.matmul(Dx, P_t[C2]))
+        )
         return delta_sigma_C1C2
 
     G = graph.copy()
@@ -721,11 +627,6 @@ def walktrap_edge_weights(graph, t):
     # Assign edge weights to the graph
     for edge in G.es:
         weight = min_sigma_heap.pop(0)[0]
-        edge['weight'] = weight
+        edge["weight"] = weight
 
     return G
-
-
-
-
-
