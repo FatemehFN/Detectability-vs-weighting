@@ -6,6 +6,7 @@ import sys
 import numpy as np
 import pandas as pd
 from scipy import sparse, stats
+from clustering import clustering_models
 
 if "snakemake" in sys.modules:
     net_file = snakemake.input["net_file"]
@@ -28,10 +29,7 @@ else:
 
 
 from sklearn import cluster
-
 import igraph
-import leidenalg
-import infomap
 
 
 def clustering(net, emb, group_ids, com_detect_method="leiden", metric="euclidean"):
@@ -51,10 +49,7 @@ def clustering(net, emb, group_ids, com_detect_method="leiden", metric="euclidea
     else:
         weight = np.linalg.norm(emb[src, :] - emb[trg, :], axis=1)
     n_nodes = net.shape[0]
-    if com_detect_method == "leiden":
-        memberships = detect_by_leiden(src, trg, weight)
-    elif com_detect_method == "infomap":
-        memberships = detect_by_infomap(src, trg, weight, n_nodes)
+    memberships = clustering_models[com_detect_method](src, trg, weight)
     return memberships
 
 
