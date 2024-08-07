@@ -14,6 +14,7 @@ if "snakemake" in sys.modules:
     output_file = snakemake.output["output_file"]
     params = snakemake.params["parameters"]
     metric = params["metric"]
+    com_detect_method = params["clustering"]
     # model_name = params["model_name"]
 
 else:
@@ -22,6 +23,7 @@ else:
     emb_file = "../data/derived/community-detection-datasets/mpm/embedding/n~5000_q~50_cave~50_mu~0.25_sample~8_model~GAT_dim~128.npz"
     model_name = "GAT"
     output_file = "unko"
+    com_detect_method = "infomap"
     metric = "cosine"
 
 
@@ -29,9 +31,39 @@ from sklearn import cluster
 
 import igraph
 import leidenalg
+import infomap
 
 
-def clustering(net, emb, group_ids, metric="euclidean"):
+def detect_by_infomap(src, trg, weight, n_nodes):
+    im = infomap.Infomap("--two-level --directed")
+    for i in range(len(src)):
+        im.add_link(src[i], trg[i], weight[i])
+    im.run()
+    cids = np.zeros(n_nodes)
+    for node in im.tree:
+        if node.is_leaf:
+            cids[node.node_id] = node.module_id
+    return np.unique(cids, return_inverse=True)[1]
+
+
+def detect_by_leiden(src, trg, weight):
+    g = igraph.Graph.TupleList(
+        [[src[i], trg[i], weight[i]] for i in range(len(src))],
+        weights=True,
+        directed=False,
+    )
+    weights = [edge["weight"] for edge in g.es]
+    part = leidenalg.find_partition(
+        g, leidenalg.ModularityVertexPartition, weights=weights
+    )
+    node_idx = np.array([g.vs[i]["name"] for i in range(len(g.vs))])
+    memberships = np.zeros(net.shape[0])
+    for i, p in enumerate(part):
+        memberships[node_idx[p]] = i
+    return memberships
+
+
+def clustering(net, emb, group_ids, com_detect_method="leiden", metric="euclidean"):
     src, trg, _ = sparse.find(net)
 
     if metric == "dotsim":
@@ -47,21 +79,11 @@ def clustering(net, emb, group_ids, metric="euclidean"):
         weight = 1.0 / (1 + np.exp(-weight))
     else:
         weight = np.linalg.norm(emb[src, :] - emb[trg, :], axis=1)
-
-    g = igraph.Graph.TupleList(
-        [[src[i], trg[i], weight[i]] for i in range(len(src))],
-        weights=True,
-        directed=False,
-    )
-    weights = [edge["weight"] for edge in g.es]
-    part = leidenalg.find_partition(
-        g, leidenalg.ModularityVertexPartition, weights=weights
-    )
-    node_idx = np.array([g.vs[i]["name"] for i in range(len(g.vs))])
-    memberships = np.zeros(net.shape[0])
-    for i, p in enumerate(part):
-        memberships[node_idx[p]] = i
-
+    n_nodes = net.shape[0]
+    if com_detect_method == "leiden":
+        memberships = detect_by_leiden(src, trg, weight)
+    elif com_detect_method == "infomap":
+        memberships = detect_by_infomap(src, trg, weight, n_nodes)
     return memberships
 
 
@@ -79,8 +101,10 @@ emb = emb[keep, :]
 memberships = memberships[keep]
 
 # Evaluate
-group_ids = clustering(net, emb, memberships, metric=metric)
-
+group_ids = clustering(
+    net, emb, memberships, com_detect_method=com_detect_method, metric=metric
+)
+# %%
 group_ids_ = np.zeros(n_nodes) * np.nan
 group_ids_[keep] = group_ids
 
