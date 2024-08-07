@@ -2,17 +2,20 @@
 
 # %%
 import sys
-
+from sklearn import cluster
+import igraph
 import numpy as np
 import pandas as pd
 from scipy import sparse, stats
+from clustering import clustering_models
 
 if "snakemake" in sys.modules:
     net_file = snakemake.input["net_file"]
     com_file = snakemake.input["com_file"]
     output_file = snakemake.output["output_file"]
     params = snakemake.params["parameters"]
-    metric = params["metric"]
+    reweighting_method = params["reweighting"]
+    clustering_method = params["clustering"]
     # model_name = params["model_name"]
 
 else:
@@ -24,77 +27,50 @@ else:
     metric = "cosine"
 
 
-from sklearn import cluster
-
-import igraph
-import leidenalg
-
-
-
 def bc_reweight(graph):
     """
     Reweights the edges of the graph based on edge betweenness centrality.
-    
+
     Parameters:
         graph (igraph.Graph): The input graph.
-        
+
     Returns:
         igraph.Graph: The weighted graph with edge weights based on betweenness centrality.
     """
     # Calculate edge betweenness centrality
     edge_betweenness = graph.edge_betweenness(directed=False)
-    
+
     # Assign edge betweenness as weights to the edges
     for edge, betweenness in zip(graph.es, edge_betweenness):
-        edge["weight"] = 1/betweenness
-    
+        edge["weight"] = 1 / betweenness
+
     return graph
 
 
+# Fatameh, if you want to add a new reweighting method, you can do so by:
+# 1) Adding a new function below with any name you like
+# 2) Add "elif" clause to the reweighting_method variable, with condition that reweighting_method == <your_new_method_name>. This "<your_new_method_name>" is any string consisting of alphabets (no numbers or special characters).
+# 3) Then, add the <your_new_method_name> to the list in Snakemake in a dictionary named `params_topology_reweighting`
 
 
-
-
-
-
-def clustering(net, metric="euclidean"):
-    src, trg, _ = sparse.find(net)
-
-
-    g = igraph.Graph.TupleList(
-        [[src[i], trg[i]] for i in range(len(src))],
+def scipy2igraph(net):
+    src, trg, weight = sparse.find(net)
+    return igraph.Graph.TupleList(
+        [[src[i], trg[i], weight[i]] for i in range(len(src))],
+        weights=True,
         directed=False,
     )
-
-    edge_betweenness = g.edge_betweenness(directed=False)
-    
-    # Assign edge betweenness as weights to the edges
-    for edge, betweenness in zip(g.es, edge_betweenness):
-        edge["weight"] = 1/betweenness
-
-
-    weights = [edge["weight"] for edge in g.es]
-    part = leidenalg.find_partition(
-        g, leidenalg.ModularityVertexPartition, weights=weights
-    )
-    node_idx = np.array([g.vs[i]["name"] for i in range(len(g.vs))])
-    memberships = np.zeros(net.shape[0])
-    for i, p in enumerate(part):
-        memberships[node_idx[p]] = i
-
-    return memberships
 
 
 net = sparse.load_npz(net_file)
 
+g = scipy2igraph(net)
 
+if reweighting_method == "bc":
+    g = bc_reweight(g)
+else:
+    raise ValueError(f"Unknown reweighting method: {reweighting_method}")
 
+group_ids = clustering_models[clustering_method](g)
 
-# Evaluate
-group_ids = clustering(net, metric=metric)
-
-
-# %%
-# Save
-#
 np.savez(output_file, group_ids=group_ids)
