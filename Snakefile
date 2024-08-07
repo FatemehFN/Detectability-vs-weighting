@@ -59,7 +59,7 @@ params_lfr = { # LFR
 
 params_clustering = {
     "metric": ["cosine", "dotsim", "sigmoid"],
-    "clustering": ["leiden"],
+    "clustering": ["leiden", "infomap"],
     #"clustering": ["kmeans", "leiden"],
 }
 
@@ -243,7 +243,7 @@ rule leiden_clustering_lfr:
         mem="12G",
         time="01:00:00",
     script:
-        "workflow/reweighted-network-clustering.py"
+        "workflow/clustering-embedding-reweighted.py"
 
 rule evaluate_communities_lfr:
     input:
@@ -386,7 +386,7 @@ rule leiden_clustering_mpm:
         mem="12G",
         time="01:00:00",
     script:
-        "workflow/reweighted-network-clustering.py"
+        "workflow/clustering-embedding-reweighted.py"
 
 rule evaluate_communities_mpm:
     input:
