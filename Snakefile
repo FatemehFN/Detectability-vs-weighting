@@ -47,20 +47,24 @@ params_mpm = {
 
 params_lfr = { # LFR
     "n": [3000],  # Network size
-    "k": [25, 50],  # Average degree
-    "tau": [2.5, 3],  # degree exponent
+    "k": [50],  # Average degree
+    "tau": [3],  # degree exponent
     "tau2": [3],  # community size exponent
     "minc": [100],  # min community size
-    "maxk": [500, 1000], # maximum degree,
-    "maxc": [500, 1000], # maximum community size
-    "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
-    "sample": list(range(N_SAMPLES)),  # Number of samples
+    "maxk": [1000], # maximum degree,
+    "maxc": [1000], # maximum community size
+    "mu": [0.1],
+    "sample": [1],  # Number of samples
 }
 
-params_clustering = {
+params_clustering_embedding_reweighting = {
     "metric": ["cosine", "dotsim", "sigmoid"],
     "clustering": ["leiden"],
-    #"clustering": ["kmeans", "leiden"],
+}
+
+params_clustering_topology_reweighting = {
+    "metric": ["bc"],
+    "clustering": ["leiden", "infomap"],
 }
 
 params_fig_lfr = {
@@ -71,14 +75,16 @@ params_fig_lfr = {
     "minc": params_lfr["minc"],
     "maxk": params_lfr["maxk"],
     "maxc": params_lfr["maxc"],
-    "metric": params_clustering["metric"],
+    "metric": params_clustering_embedding_reweighting["metric"],
+    "clustering": params_clustering_embedding_reweighting["clustering"],
 }
 params_fig_mpm = {
     "n": params_mpm["n"],
     "q": params_mpm["q"],
     "dim": params_emb["dim"],
     "cave": params_mpm["cave"],
-    "metric": params_clustering["metric"],
+    "metric": params_clustering_embedding_reweighting["metric"],
+    "clustering": params_clustering_embedding_reweighting["clustering"],
 }
 
 # ======================================
@@ -104,12 +110,20 @@ LFR_NODE_TRAIN_FILE = j(LFR_NET_DIR, f"train_node_{paramspace_lfr.wildcard_patte
 paramspace_lfr_emb = to_paramspace([params_lfr, params_emb])
 LFR_EMB_FILE = j(LFR_EMB_DIR, f"{paramspace_lfr_emb.wildcard_pattern}.npz")
 
-paramspace_lfr_com_detect_emb = to_paramspace([params_lfr, params_emb, params_clustering])
+paramspace_lfr_com_detect_emb = to_paramspace([params_lfr, params_emb, params_clustering_embedding_reweighting])
+paramspace_lfr_com_detect_topo = to_paramspace([params_lfr, params_clustering_topology_reweighting])
+
 LFR_COM_DETECT_EMB_FILE = j(
     LFR_CLUST_DIR, f"clus_{paramspace_lfr_com_detect_emb.wildcard_pattern}.npz"
 )
 
+LFR_COM_DETECT_TOPO_FILE = j(
+    LFR_CLUST_DIR, f"clus_topo_reweighted_{paramspace_lfr_com_detect_topo.wildcard_pattern}.npz"
+)
+
+
 LFR_EVAL_EMB_FILE = j(LFR_EVAL_DIR, f"score_clus_{paramspace_lfr_com_detect_emb.wildcard_pattern}.npz")
+LFR_EVAL_TOPO_FILE = j(LFR_EVAL_DIR, f"score_clus_topo_reweighted_{paramspace_lfr_com_detect_topo.wildcard_pattern}.npz")
 
 # Figure
 FIG_LFR_PERF_CURVE = j(FIG_DIR, "lfr_perf_curve_n~{n}_k~{k}_tau~{tau}_dim~{dim}_minc~{minc}_maxk~{maxk}_maxc~{maxc}_metric~{metric}.pdf")
@@ -141,11 +155,17 @@ MPM_NODE_TRAIN_FILE = j(MPM_NET_DIR, f"train_node_{paramspace_mpm.wildcard_patte
 paramspace_mpm_emb = to_paramspace([params_mpm, params_emb])
 MPM_EMB_FILE = j(MPM_EMB_DIR, f"{paramspace_mpm_emb.wildcard_pattern}.npz")
 
-paramspace_mpm_com_detect_emb = to_paramspace([params_mpm, params_emb, params_clustering])
+paramspace_mpm_com_detect_emb = to_paramspace([params_mpm, params_emb, params_clustering_embedding_reweighting])
+paramspace_mpm_com_detect_topo = to_paramspace([params_mpm, params_clustering_topology_reweighting])
+
 MPM_COM_DETECT_EMB_FILE = j(
     MPM_CLUST_DIR, f"clus_{paramspace_mpm_com_detect_emb.wildcard_pattern}.npz"
 )
-MPM_EVAL_EMB_FILE = j(MPM_EVAL_DIR, f"score_clus_{paramspace_mpm_com_detect_emb.wildcard_pattern}.npz")
+MPM_COM_DETECT_TOPO_FILE = j(
+    MPM_CLUST_DIR, f"clus_topo_reweighted_{paramspace_mpm_com_detect_topo.wildcard_pattern}.npz"
+)
+MPM_EVAL_EMB_FILE = j(MPM_EVAL_DIR, f"score_clus_emb_{paramspace_mpm_com_detect_emb.wildcard_pattern}.npz")
+MPM_EVAL_TOPO_FILE = j(MPM_EVAL_DIR, f"score_clus_topo_reweighted_{paramspace_mpm_com_detect_topo.wildcard_pattern}.npz")
 
 # ======================================
 # LFR benchmark
@@ -153,14 +173,14 @@ MPM_EVAL_EMB_FILE = j(MPM_EVAL_DIR, f"score_clus_{paramspace_mpm_com_detect_emb.
 
 rule all_mpm:
     input:
-        expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering),
+        expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering_embedding_reweighting)+expand(MPM_EVAL_TOPO_FILE, **params_mpm, **params_clustering_topology_reweighting),
         j(MPM_EVAL_DIR, "all_scores.csv"),
         expand(FIG_MPM_PERF_CURVE, **params_fig_mpm),
         expand(FIG_MPM_AUCESIM, **params_fig_mpm),
 
 rule all_lfr:
     input:
-        expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering),
+        expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering_embedding_reweighting)+expand(LFR_EVAL_TOPO_FILE, **params_lfr, **params_clustering_topology_reweighting),
         j(LFR_EVAL_DIR, "all_scores.csv"),
 
 rule figs_lfr:
@@ -228,7 +248,7 @@ rule kmeans_clustering_lfr:
     script:
         "workflow/kmeans-clustering.py"
 
-rule leiden_clustering_lfr:
+rule clustering_lfr_embedding_reweighted:
     input:
         net_file = LFR_NET_FILE,
         emb_file=LFR_EMB_FILE,
@@ -237,13 +257,25 @@ rule leiden_clustering_lfr:
         output_file=LFR_COM_DETECT_EMB_FILE,
     params:
         parameters=paramspace_lfr_com_detect_emb.instance,
-    wildcard_constraints:
-        clustering="leiden",
     resources:
         mem="12G",
         time="01:00:00",
     script:
-        "workflow/reweighted-network-clustering.py"
+        "workflow/clustering-embedding-reweighted.py"
+
+rule clustering_lfr_topology_reweighted:
+    input:
+        net_file = LFR_NET_FILE,
+        com_file=LFR_NODE_FILE,
+    output:
+        output_file=LFR_COM_DETECT_TOPO_FILE,
+    params:
+        parameters=paramspace_lfr_com_detect_topo.instance,
+    resources:
+        mem="12G",
+        time="01:00:00",
+    script:
+        "workflow/clustering-topology-reweighted.py"
 
 rule evaluate_communities_lfr:
     input:
@@ -257,9 +289,21 @@ rule evaluate_communities_lfr:
     script:
         "workflow/eval-com-detect-score.py"
 
+rule evaluate_communities_lfr_topo_reweighted:
+    input:
+        detected_group_file=LFR_COM_DETECT_TOPO_FILE,
+        com_file=LFR_NODE_FILE,
+    output:
+        output_file=LFR_EVAL_TOPO_FILE,
+    resources:
+        mem="12G",
+        time="00:10:00",
+    script:
+        "workflow/eval-com-detect-score.py"
+
 rule concatenate_lfr_result:
     input:
-        input_files = expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering),
+        input_files = expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering_embedding_reweighting)+expand(LFR_EVAL_TOPO_FILE, **params_lfr, **params_clustering_topology_reweighting),
     output:
         output_file = j(LFR_EVAL_DIR, "all_scores.csv"),
     params:
@@ -371,7 +415,7 @@ rule kmeans_clustering_mpm:
     script:
         "workflow/kmeans-clustering.py"
 
-rule leiden_clustering_mpm:
+rule clustering_mpm_embedding_reweighted:
     input:
         net_file = MPM_NET_FILE,
         emb_file=MPM_EMB_FILE,
@@ -380,13 +424,25 @@ rule leiden_clustering_mpm:
         output_file=MPM_COM_DETECT_EMB_FILE,
     params:
         parameters=paramspace_mpm_com_detect_emb.instance,
-    wildcard_constraints:
-        clustering="leiden",
     resources:
         mem="12G",
         time="01:00:00",
     script:
-        "workflow/reweighted-network-clustering.py"
+        "workflow/clustering-embedding-reweighted.py"
+
+rule clustering_mpm_topology_reweighted:
+    input:
+        net_file = MPM_NET_FILE,
+        com_file=MPM_NODE_FILE,
+    output:
+        output_file=MPM_COM_DETECT_TOPO_FILE,
+    params:
+        parameters=paramspace_mpm_com_detect_topo.instance,
+    resources:
+        mem="12G",
+        time="01:00:00",
+    script:
+        "workflow/clustering-topology-reweighted.py"
 
 rule evaluate_communities_mpm:
     input:
@@ -400,9 +456,21 @@ rule evaluate_communities_mpm:
     script:
         "workflow/eval-com-detect-score.py"
 
+rule evaluate_communities_mpm_topo_reweighted:
+    input:
+        detected_group_file=MPM_COM_DETECT_TOPO_FILE,
+        com_file=MPM_NODE_FILE,
+    output:
+        output_file=MPM_EVAL_TOPO_FILE,
+    resources:
+        mem="12G",
+        time="00:10:00",
+    script:
+        "workflow/eval-com-detect-score.py"
+
 rule concatenate_mpm_result:
     input:
-        input_files = expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering),
+        input_files = expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering_embedding_reweighting) + expand(MPM_EVAL_TOPO_FILE, **params_mpm, **params_clustering_topology_reweighting),
     output:
         output_file = j(MPM_EVAL_DIR, "all_scores.csv"),
     params:
@@ -429,3 +497,4 @@ rule plot_mpm_result:
         metric = lambda wildcards: wildcards.metric,
     script:
         "workflow/plot_mpm_scores.py"
+
